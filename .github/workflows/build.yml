@@ -1,0 +1,51 @@
+name: Build Kernel M51 + KernelSU v0.9.5
+on:
+  workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Lấy mã nguồn có đúng m51_defconfig
+        uses: actions/checkout@v4
+        with:
+          repository: LineageOS/android_kernel_samsung_a71
+          ref: lineage-23.2
+          path: kernel
+
+      - name: Cài môi trường đầy đủ
+        run: |
+          sudo apt update -y
+          sudo apt install -y git build-essential flex bison libssl-dev libelf-dev bc libncurses-dev
+          sudo apt install -y gcc-aarch64-linux-gnu
+
+      - name: Thêm KernelSU v0.9.5 cho nhân 4.14
+        working-directory: kernel
+        run: |
+          curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/v0.9.5/kernel/setup.sh | bash
+
+      - name: Cấu hình & biên dịch — sửa lỗi silentoldconfig
+        working-directory: kernel
+        run: |
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          make mrproper
+          make m51_defconfig
+          echo -e "CONFIG_KSU=y\nCONFIG_KPROBES=y\nCONFIG_HAVE_KPROBES=y\nCONFIG_KPROBE_EVENTS=y\nCONFIG_MODULES=y" >> arch/arm64/configs/m51_defconfig
+          make olddefconfig < /dev/null
+          make -j$(nproc) Image.gz-dtb
+
+      - name: Đóng gói với AnyKernel3
+        working-directory: kernel
+        run: |
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git
+          cp arch/arm64/boot/Image.gz-dtb AnyKernel3/
+          cd AnyKernel3
+          zip -r KernelSU‑M51‑v0.9.5.zip *
+
+      - name: Tải kết quả
+        uses: actions/upload-artifact@v4
+        with:
+          path: kernel/AnyKernel3/KernelSU‑M51‑v0.9.5.zip
+          name: Kernel‑M51‑KernelSU095
+          
