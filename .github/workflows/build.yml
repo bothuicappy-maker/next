@@ -1,50 +1,52 @@
-name: Build Kernel M51 + KernelSU v0.9.5
+name: Build Kernel M51 + KernelSU v0.9.5
 on:
   workflow_dispatch
 
 jobs:
   build:
-    runs-on: ubuntu‑20.04
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v4
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
         with:
           repository: LineageOS/android_kernel_samsung_a71
-          ref: lineage‑23.2
+          ref: lineage-23.2
           path: kernel
 
-      - name: Cài môi trường tương thích
+      - name: Cài môi trường
         run: |
           sudo apt update -y
-          sudo apt install -y git build‑essential flex bison libssl‑dev libelf‑dev bc libncurses‑dev python2
-          sudo apt install -y gcc‑10‑aarch64‑linux‑gnu g++‑10‑aarch64‑linux‑gnu
+          sudo apt install -y git build-essential flex bison libssl-dev libelf-dev bc libncurses-dev python2
+          sudo apt install -y gcc-10-aarch64-linux-gnu g++-10-aarch64-linux-gnu
 
-      - name: Thêm KernelSU 0.9.5
-        working‑directory: kernel
+      - name: Thêm KernelSU v0.9.5
+        working-directory: kernel
         run: |
           curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/v0.9.5/kernel/setup.sh | bash
 
       - name: Cấu hình & biên dịch
-        working‑directory: kernel
+        working-directory: kernel
         run: |
           export ARCH=arm64
-          export CROSS_COMPILE=aarch64‑linux‑gnu‑10‑
+          export CROSS_COMPILE=aarch64-linux-gnu-10-
           export PYTHON=python2
           make mrproper
           make m51_defconfig
           echo -e "CONFIG_KSU=y\nCONFIG_KPROBES=y\nCONFIG_HAVE_KPROBES=y\nCONFIG_KPROBE_EVENTS=y\nCONFIG_MODULES=y" >> arch/arm64/configs/m51_defconfig
           yes "" | make olddefconfig
-          make -j$(nproc) Image.gz‑dtb
+          make -j$(nproc) Image.gz-dtb
 
       - name: Đóng gói
-        working‑directory: kernel
+        working-directory: kernel
         run: |
           git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git
-          cp arch/arm64/boot/Image.gz‑dtb AnyKernel3/
+          cp arch/arm64/boot/Image.gz-dtb AnyKernel3/
           cd AnyKernel3
-          zip -r KernelSU‑M51‑v0.9.5.zip *
+          zip -r KernelSU-M51-v0.9.5.zip *
 
-      - uses: actions/upload‑artifact@v4
+      - name: Tải kết quả
+        uses: actions/upload-artifact@v4
         with:
-          path: kernel/AnyKernel3/KernelSU‑M51‑v0.9.5.zip
-          name: Kernel‑M51
+          path: kernel/AnyKernel3/KernelSU-M51-v0.9.5.zip
+          name: Kernel-M51
           
